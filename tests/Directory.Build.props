@@ -1,0 +1,7 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <PropertyGroup>
+    <!-- Test names read as sentences: Method_condition_expected. xUnit fixtures need public types named *Collection. -->
+    <NoWarn>$(NoWarn);CA1707;CA1711;CA1515;CA2007</NoWarn>
+  </PropertyGroup>
+</Project>

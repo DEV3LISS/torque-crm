@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Torque.Api/Torque.Api.csproj" />
+    <Project Path="src/Torque.Application/Torque.Application.csproj" />
+    <Project Path="src/Torque.Domain/Torque.Domain.csproj" />
+    <Project Path="src/Torque.Infrastructure/Torque.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Torque.ArchitectureTests/Torque.ArchitectureTests.csproj" />
+    <Project Path="tests/Torque.E2ETests/Torque.E2ETests.csproj" />
+    <Project Path="tests/Torque.IntegrationTests/Torque.IntegrationTests.csproj" />
+    <Project Path="tests/Torque.UnitTests/Torque.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, unit + integration + architecture tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (warnings are errors)
+        run: dotnet build --no-restore -c Release
+
+      # Integration tests start PostgreSQL via Testcontainers — Docker is available on GitHub runners.
+      # E2E tests are skipped here (no TORQUE_E2E_URL); they run in the e2e job against the real image.
+      - name: Test
+        run: dotnet test --no-build -c Release --logger "trx" --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/**"
+
+  dependencies:
+    name: Vulnerable dependency check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Fail on known vulnerable packages (direct and transitive)
+        run: |
+          dotnet restore
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          ! grep -q "has the following vulnerable packages" vulnerable.txt
+
+  e2e:
+    name: End-to-end against the Docker image
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Start the stack (builds the production image)
+        run: docker compose up -d --build
+
+      - name: Wait until ready
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/health/ready && exit 0
+            sleep 2
+          done
+          docker compose logs api
+          exit 1
+
+      - name: E2E tests
+        env:
+          TORQUE_E2E_URL: http://localhost:8080
+        run: dotnet test tests/Torque.E2ETests -c Release
+
+      - name: API logs on failure
+        if: failure()
+        run: docker compose logs api
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

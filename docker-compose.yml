@@ -1,0 +1,60 @@
+# One command to run the whole thing locally:  docker compose up --build
+# Swagger UI: http://localhost:8080/swagger   (login: admin@torque.local / see SEED_ADMIN_PASSWORD)
+#
+# With metrics and traces:  docker compose --profile observability up --build
+#   Prometheus: http://localhost:9090   (try: rate(http_server_request_duration_seconds_count[1m]))
+#   Jaeger:     http://localhost:16686  (service "torque-crm": every request with its SQL commands as spans)
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: torque
+      POSTGRES_USER: torque
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-torque}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U torque -d torque"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=db;Port=5432;Database=torque;Username=torque;Password=${POSTGRES_PASSWORD:-torque};Gss Encryption Mode=Disable
+      # Demo defaults so `docker compose up` just works. For anything real, put values in a .env file.
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-demo-only-signing-key-change-me-0123456789abcdef}
+      Database__MigrateOnStartup: "true"
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-admin@torque.local}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-ChangeMe-2026!}
+      Seed__AdminFullName: Demo Admin
+      Seed__DemoData: "true"
+      # Traces go to Jaeger when the observability profile runs; harmless (export just fails quietly) otherwise.
+      OpenTelemetry__OtlpEndpoint: http://jaeger:4317
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: ["observability"]
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  jaeger:
+    image: jaegertracing/jaeger:2.9.0
+    profiles: ["observability"]
+    ports:
+      - "16686:16686"
+
+volumes:
+  pgdata:
