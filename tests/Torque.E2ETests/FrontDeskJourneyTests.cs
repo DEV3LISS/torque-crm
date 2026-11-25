@@ -121,6 +121,6 @@ public class FrontDeskJourneyTests
     {
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.ShouldBe(expected, body);
-        return JsonDocument.Parse(body).RootElement.Clone();
+        return JsonElement.Parse(body);
     }
 }

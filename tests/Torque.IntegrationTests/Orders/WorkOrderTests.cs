@@ -248,7 +248,7 @@ public class WorkOrderTests(ApiFactory api) : ApiTest(api), IAsyncLifetime
         update.UserId.ShouldBe(me!.Id);
         update.CorrelationId.ShouldNotBeNullOrEmpty();
 
-        var phone = JsonDocument.Parse(update.Changes).RootElement.GetProperty("Phone");
+        var phone = JsonElement.Parse(update.Changes).GetProperty("Phone");
         phone.GetProperty("new").GetString().ShouldBe("**********22");
         update.Changes.ShouldNotContain("79990001122");
     }
