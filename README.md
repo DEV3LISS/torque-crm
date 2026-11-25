@@ -5,7 +5,7 @@ double-booking**, work orders, payments that are **never charged twice**, report
 
 **.NET 10 · ASP.NET Core Web API · EF Core · PostgreSQL · JWT · Docker · xUnit + Testcontainers · OpenTelemetry · k6**
 
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](.github/workflows/ci.yml)
+[![CI](https://github.com/DEV3LISS/torque-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/DEV3LISS/torque-crm/actions/workflows/ci.yml)
 · 158 automated tests · 21 architecture decision records · measured performance · documented failure scenarios
 
 ## Why this project is interesting
@@ -75,9 +75,9 @@ sequenceDiagram
     C->>A: POST /work-orders/{id}/payments<br/>Idempotency-Key: k1
     A->>DB: payment with key k1 exists?
     DB-->>A: no
-    A->>DB: BEGIN; SELECT … FOR UPDATE (order row)
+    A->>DB: BEGIN, then SELECT … FOR UPDATE (order row)
     A->>A: domain: amount ≤ due?
-    A->>DB: INSERT payment, UPDATE order, INSERT audit; COMMIT
+    A->>DB: INSERT payment, UPDATE order, INSERT audit, COMMIT
     A-->>C: 201 Created
     Note over C,A: network timeout → client retries
     C->>A: POST … Idempotency-Key: k1
